@@ -1,8 +1,6 @@
 ![logo](https://github.com/mnmun/a_bc/blob/main/logo.png?raw=true)
 
-# a_bc
-
-A minimal set of tools for building small simple lexers.
+# A minimal set of tools for building small simple lexers
 
 ## At your service
 
@@ -23,7 +21,7 @@ use a_bc::{
    traits::KindBounds,
 };
 
-// Define enum for token kinds.
+// Define enum for token kinds
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Kind {
    Comma,
