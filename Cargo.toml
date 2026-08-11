@@ -1,0 +1,29 @@
+[profile.release]
+debug = true
+
+[workspace]
+resolver = "2"
+members = [
+  "a_bc",
+  "json",
+]
+
+[workspace.package]
+authors = ["mnmun <mnmnmun@proton.me>"]
+version = "0.0.0"
+homepage = "https://github.com/mnmun/a_bc"
+repository = "https://github.com/mnmun/a_bc"
+readme = "README.md"
+license = "MIT"
+edition = "2024"
+
+[workspace.dependencies]
+a_bc = { version = "0.0.0", path = "./a_bc" }
+
+pretty_assertions = "1.4.1"
+tokio = { version = "1.53.1", features = [ "rt", "rt-multi-thread", "macros", "time" ] }
+criterion = { version = "0.5", features = [ "html_reports" ] }
+getset = "0.1.6"
+memchr = "2"
+
+

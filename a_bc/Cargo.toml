@@ -1,0 +1,17 @@
+[package]
+name = "a_bc"
+description = "make simple lexers"
+authors.workspace = true
+version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+
+[dependencies]
+getset.workspace = true
+memchr.workspace = true
