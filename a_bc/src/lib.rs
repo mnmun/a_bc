@@ -1,17 +1,15 @@
 #![warn(missing_docs)]
 //! ![logo](https://github.com/mnmun/a_bc/blob/main/logo.png?raw=true)
 //!
-//! # a_bc
+//! # A minimal set of tools for building small simple lexers.
 //!
-//! A minimal set of tools for building small simple lexers.
-//!
-//! # At your service
+//! ## At your service
 //!
 //! This crate provides core building blocks - a cursor-based [`Lexer`] and
 //! [`Token`] with a user-defined kind - so you only have to write the
 //! token-recognition logic.
 //!
-//! # How do I use it?
+//! ## How do I use it?
 //!
 //! Let's write a simple usage example in which the lexer distinguishes strings
 //! separated by commas. Commas and strings can be separated by any number of
@@ -154,6 +152,10 @@
 //!
 //! This is a really simple example just to show the basics. [Here] you could
 //! find more complex and useful example of a JSON lexer.
+//!
+//! ## License
+//!
+//! [MIT](https://github.com/mnmun/a_bc/tree/main/LICENSE)
 //!
 //! [`Lexer`]: crate::lexer::Lexer
 //! [`Token`]: crate::token::Token
