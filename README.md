@@ -146,7 +146,7 @@ assert_eq!(token.range(), &Range { start: 15usize, end: 26usize });
 assert_eq!(&source[token.range().clone()], b"s o u r c e");
 ```
 
-This is a really simple example just to show the basics. [Here](https://github.com/mnmun/json/tree/main) you could find more complex and useful example of a JSON lexer.
+This is a really simple example just to show the basics. [Here](https://github.com/mnmun/json) you could find more complex and useful example of a JSON lexer.
 
 ## License
 
