@@ -47,12 +47,12 @@ impl<'a> Iterator for DemoLexer<'a> {
        // For multithread and concurrent use it is useful to be able to
        // shut the lexer down mid-scan, e.g. the application exit. Note
        // that the same cancellation token is checked again below, during
-       // the potentially time-consuming token creation.
+       // the potentially time-consuming token creation
        if self.0.cancel().is_cancelled() {
            return None;
        }
 
-       // Skip whitespaces between tokens (spaces, newlines, tabs, etc)
+       // Skip whitespaces between tokens (spaces, newlines, tabs, etc.)
        self.0.skip_whitespace();
 
        let token = self.0.cursor().byte().and_then(|byte| {
@@ -109,6 +109,7 @@ let source = b"some, kind,of, s o u r c e";
 // Chars idx:  01234567890123456789012345
 
 let mut lexer = DemoLexer(Builder::new(source).build().unwrap());
+
 let token = lexer.next().unwrap();
 assert_eq!(token.kind(), &Kind::String);
 assert_eq!(token.range(), &Range { start: 0usize, end: 4usize });
@@ -145,7 +146,7 @@ assert_eq!(token.range(), &Range { start: 15usize, end: 26usize });
 assert_eq!(&source[token.range().clone()], b"s o u r c e");
 ```
 
-This is a really simple example just to show the basics. [Here](https://github.com/mnmun/a_bc/tree/main/json/lib.rs) you could find more complex and useful example of a JSON lexer.
+This is a really simple example just to show the basics. [Here](https://github.com/mnmun/json/tree/main) you could find more complex and useful example of a JSON lexer.
 
 ## License
 

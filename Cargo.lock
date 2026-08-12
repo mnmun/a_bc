@@ -6,9 +6,11 @@ version = 4
 name = "a_bc"
 version = "0.0.0"
 dependencies = [
+ "criterion",
  "getset",
  "memchr",
  "pretty_assertions",
+ "tokio",
 ]
 
 [[package]]
@@ -274,17 +276,6 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "json"
-version = "0.0.0"
-dependencies = [
- "a_bc",
- "criterion",
- "memchr",
- "pretty_assertions",
- "tokio",
 ]
 
 [[package]]
