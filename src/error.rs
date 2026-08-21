@@ -114,7 +114,7 @@ pub mod token {
             /// The token kinds that were expected
             expected: Box<[Kind]>,
             /// The token kind that was actually found
-            got: Kind,
+            got: Option<Kind>,
             /// Row-column position of the offending token in the source
             after: (usize, usize),
         },
@@ -124,13 +124,10 @@ pub mod token {
             /// The token kinds that were not expected
             not_expected: Box<[Kind]>,
             /// The token kind that was actually found
-            got: Kind,
+            got: Option<Kind>,
             /// Row-column position of the offending token in the source
             after: (usize, usize),
         },
-
-        /// Absence of expected tokens
-        NoMoreTokens,
     }
 
     impl<Kind: KindBounds> fmt::Display for Error<Kind> {
@@ -153,10 +150,20 @@ pub mod token {
                     after,
                 } => {
                     let (row, col) = after;
+
                     write!(
                         f,
-                        "Expected one of these tokens: {expected:?} after [{row}:{col}], but got {got:?}"
-                    )
+                        "Expected one of these tokens: {expected:?} after [{row}:{col}], but got "
+                    )?;
+
+                    match *got {
+                        Some(kind) => {
+                            write!(f, "{kind:?}")
+                        }
+                        None => {
+                            write!(f, "nothing")
+                        }
+                    }
                 }
                 Error::NotExpectedButGot {
                     not_expected,
@@ -164,12 +171,21 @@ pub mod token {
                     after,
                 } => {
                     let (row, col) = after;
+
                     write!(
                         f,
-                        "Not expected these tokens: {not_expected:?} after [{row}:{col}], but got {got:?}"
-                    )
+                        "Not expected these tokens: {not_expected:?} after [{row}:{col}], but got "
+                    )?;
+
+                    match *got {
+                        Some(kind) => {
+                            write!(f, "{kind:?}")
+                        }
+                        None => {
+                            write!(f, "nothing")
+                        }
+                    }
                 }
-                Error::NoMoreTokens => write!(f, "Got no more tokens"),
             }
         }
     }
@@ -192,7 +208,6 @@ pub mod token {
                     got: _,
                     after: _,
                 } => None,
-                Error::NoMoreTokens => None,
             }
         }
     }
