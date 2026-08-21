@@ -128,6 +128,9 @@ pub mod token {
             /// Row-column position of the offending token in the source
             after: (usize, usize),
         },
+
+        /// Absence of expected tokens
+        NoMoreTokens,
     }
 
     impl<Kind: KindBounds> fmt::Display for Error<Kind> {
@@ -166,6 +169,7 @@ pub mod token {
                         "Not expected these tokens: {not_expected:?} after [{row}:{col}], but got {got:?}"
                     )
                 }
+                Error::NoMoreTokens => write!(f, "Got no more tokens"),
             }
         }
     }
@@ -188,6 +192,7 @@ pub mod token {
                     got: _,
                     after: _,
                 } => None,
+                Error::NoMoreTokens => None,
             }
         }
     }

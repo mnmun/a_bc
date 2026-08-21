@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 //! ![logo](https://github.com/mnmun/a_bc/blob/main/logo.png?raw=true)
 //!
-//! # A minimal set of tools for building small simple lexers.
+//! A minimal set of tools for building small simple lexers.
 //!
 //! ## At your service
 //!

@@ -41,7 +41,6 @@
                 if inShell then
                   [
                     lazygit
-                    perf
                   ]
                 else
                   [
