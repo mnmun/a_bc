@@ -1,10 +1,15 @@
-//! # Cancellation
+//! # A cloneable thread-safe cancellation flag
 //!
-//! [`Cancel`] is a cloneable, thread-safe cancellation flag. All clones share
-//! the same underlying state, so one thread can request cancellation while a
-//! lexer on another thread polls it via [`Cancel::is_cancelled()`]. The flag
-//! is stored behind an [`Arc`] and toggled with acquire/release memory
-//! ordering.
+//! ![](https://github.com/mnmun/images/blob/main/stop.png?raw=true)
+//!
+//! Provides [`cancel`] - a cloneable thread-safe cancellation flag.
+//!
+//! ---
+//!
+//! See the [`crate documentation`] for usage example.
+//!
+//! [`cancel`]: Cancel
+//! [`crate documentation`]: crate
 
 use std::sync::{
     Arc,
@@ -13,38 +18,68 @@ use std::sync::{
 
 use getset::Getters;
 
-/// # A thread-safe cancellation flag
+/// # A cloneable thread-safe cancellation flag
 ///
-/// Cloning shares the same underlying flag, allowing cancellation from another
-/// thread.
+/// ![](https://github.com/mnmun/images/blob/main/stop.png?raw=true)
+///
+/// Represents a cancellation flag that can be safely cloned and transferred
+/// between multiple threads.
+///
+/// The flag is managed and inspected through the following methods:
+///
+/// - [`cancel()`] - requests the cancellation;
+/// - [`is_cancelled()`] - returns `true` if cancellation has been
+///   [`requested`], and `false` otherwise.
 ///
 /// # Example
 ///
 /// ```
-/// use a_bc::cancel::Cancel;
+/// use a_bc::Cancel;
 ///
-/// let cancel = Cancel::new();
-/// assert!(!cancel.is_cancelled());
+/// let flag = Cancel::new();
+/// assert!(!flag.is_cancelled());
 ///
-/// cancel.cancel();
-/// assert!(cancel.is_cancelled());
+/// flag.cancel();
+/// assert!(flag.is_cancelled());
 /// ```
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`cancel()`]: Cancel::cancel()
+/// [`is_cancelled()`]: Cancel::is_cancelled()
+/// [`requested`]: Cancel::cancel()
+/// [`module documentation`]: crate::cancel
+#[repr(transparent)]
 #[derive(Clone, Debug, Getters, Default)]
 pub struct Cancel(Arc<AtomicBool>);
 
 impl Cancel {
-    /// Creates a new [`Cancel`] flag in the non-cancelled state
+    /// # Creates a new [`cancellation flag`] in the non-cancelled state (`false`)
+    ///
+    /// [`cancellation flag`]: Cancel
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Returns `true` if cancellation has been requested
+    /// # Returns `true` if cancellation has been [`requested`], and `false` otherwise
+    ///
+    /// [`requested`]: Cancel::cancel()
     pub fn is_cancelled(&self) -> bool {
         self.0.load(Ordering::Acquire)
     }
 
-    /// Requests cancellation
+    /// # Requests cancellation
     pub fn cancel(&self) {
         self.0.store(true, Ordering::Release);
     }
 }
+
+impl PartialEq for Cancel {
+    fn eq(&self, other: &Self) -> bool {
+        self.is_cancelled() == other.is_cancelled()
+    }
+}
+
+impl Eq for Cancel {}

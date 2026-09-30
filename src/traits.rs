@@ -1,28 +1,50 @@
-//! # Traits for user-defined token kinds
+//! # [`Token`] traits
 //!
-//! - [`KindBounds`] - a blanket bound that any user token-kind type (e.g. an
-//!   `enum`) should satisfy
-//! - [`InnerRange`] - lets a token kind describe its own inner range, so
-//!   delimited tokens can expose their contents without the delimiters
+//! ![](https://github.com/mnmun/images/blob/main/umbrella.png?raw=true)
 //!
-//! See [`crate`] for more information.
+//! Provides the following traits:
+//!
+//! - [`KindBounds`] - a blanket bound that any user-defined token kind type
+//!   must satisfy;
+//! - [`InnerRange`] - enables a token kind to describe its own inner range, so
+//!   delimited tokens can expose their contents without the delimiters.
+//!
+//! ---
+//!
+//! See the [`crate documentation`] for more information.
+//!
+//! [`Token`]: crate::Token
+//! [`crate documentation`]: crate
 
-use std::{fmt::Debug, ops::Range};
+use std::{
+    fmt::{Debug, Display},
+    ops::Range,
+};
 
 /// # Bound on the `Kind` type parameter
 ///
-/// Requires [`PartialEq`] + [`Clone`] + [`Copy`] + [`Debug`]. A blanket impl
-/// covers all types that satisfy these bounds, so no manual implementation is
-/// needed.
-pub trait KindBounds: PartialEq + Clone + Copy + Debug {}
-impl<T> KindBounds for T where T: PartialEq + Clone + Copy + Debug {}
+/// Requires [`PartialEq`] + [`Clone`] + [`Copy`] + [`Debug`] + [`Display`].
+///
+/// A blanket implementation covers all types that satisfy these bounds, so no
+/// manual implementation is needed.
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+pub trait KindBounds: PartialEq + Clone + Copy + Debug + Display {}
+impl<T> KindBounds for T where T: PartialEq + Clone + Copy + Debug + Display {}
 
 /// # Provides the inner `range` of a delimited `token`
 ///
-/// For bracketed tokens like `{...}`, `[...]` or `"..."`, this returns the
-/// range without the delimiters. Returns `None` for tokens that have no inner
-/// content (e.g. punctuation).
+/// For delimited tokens like `{...}`, `[...]` or `"..."`, this returns the
+/// `range` without the delimiters.
+///
+/// Returns `None` for tokens that have no inner content.
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
 pub trait InnerRange {
-    /// Returns the token inner range if it exists, otherwise `None`
+    /// # Returns the token inner range if it exists, otherwise `None`
     fn inner_range(&self, range: &Range<usize>) -> Option<Range<usize>>;
 }

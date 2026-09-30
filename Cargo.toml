@@ -1,19 +1,19 @@
 [package]
 name = "a_bc"
 description = "make simple lexers"
-authors = ["mnmun <mnmnmun@proton.me>"]
 version = "0.0.0"
+authors = ["mnmun <mnmnmun@proton.me>"]
 homepage = "https://github.com/mnmun/a_bc"
 repository = "https://github.com/mnmun/a_bc"
 readme = "README.md"
+exclude = ["diagrams", "flake.nix", "flake.lock"]
 license = "MIT"
 edition = "2024"
-
-[dev-dependencies]
-pretty_assertions = "1.4.1"
 
 [dependencies]
 getset = "0.1.6"
 memchr = "2"
 
+[dev-dependencies]
+pretty_assertions = "1.4.1"
 

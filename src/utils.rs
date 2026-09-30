@@ -1,182 +1,155 @@
 //! # Byte-counting utilities
 //!
-//! Helpers built on the [`memchr`] crate for counting occurrences of a byte or
-//! byte sequence in a haystack, with optional handling of escape sequences and
-//! quoted delimiters. Also provides [`row_col_pos`] for computing 1-indexed
-//! positions used in error messages.
+//! ![](https://github.com/mnmun/images/blob/main/maintenance.png?raw=true)
+//!
+//! Provides the following byte-counting utilities implemented on top of the
+//! [`memchr`] crate:
+//!
+//! - [`count_needles()`];
+//! - [`count_needles_considering_escapes()`];
+//! - [`count_needles_considering_delimiters()`];
+//! - [`count_needles_considering_escaped_delimiters()`].
+//!
+//! In addition, provides the helper structure required for the use of the
+//! function listed above: [`Needle`] - the needle abstraction for the
+//! [`memchr`] crate.
+//!
+//! An example of using these functions is the lexer from the [`lazy_json`]
+//! crate.
+//!
+//! [`lazy_json`]: https://github.com/mnmun/lazy_json
 
-use memchr::memchr_iter;
+use memchr::{
+    Memchr, memchr_iter,
+    memmem::{FindIter, Finder},
+};
 
-/// # Needle abstraction over the [`memchr`] crate
-pub mod memchr_needle {
-    use std::rc::Rc;
+use std::rc::Rc;
 
-    use memchr::{
-        Memchr, memchr_iter,
-        memmem::{FindIter, Finder},
-    };
+/// # Needle abstraction for the [`memchr`] crate
+///
+/// ![](https://github.com/mnmun/images/blob/main/needle.png?raw=true)
+///
+/// Represents a search pattern in one of the following forms:
+///
+/// - `One` - a single byte;
+/// - `Finder` - a multi-byte sequence.
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`module documentation`]: crate::utils
+pub enum Needle<'a> {
+    /// A single-byte pattern
+    One(u8),
+    /// A multi-byte sequence pattern
+    Finder(Rc<Finder<'a>>),
+}
 
-    /// # Search pattern
-    ///
-    /// Either a single byte (`One`) or a byte-sequence matcher (`Finder`)
-    pub enum Kind<'a> {
-        /// Matches a single byte
-        One(u8),
-        /// Matches a byte sequence
-        Finder(Rc<Finder<'a>>),
-    }
-
-    impl<'a> Kind<'a> {
-        /// Creates an iterator over `needle` matches in `haystack`
-        pub fn iter(&'a self, haystack: &'a [u8]) -> Iter<'a> {
-            match self {
-                Kind::One(byte) => Iter::One(memchr_iter(*byte, haystack)),
-                Kind::Finder(finder) => {
-                    Iter::Finder(Box::new(finder.find_iter(haystack)))
-                }
-            }
-        }
-    }
-
-    /// # Unified needle iterator
-    ///
-    /// Wraps either kind of [`Kind`] behind a single `Iterator`, hiding
-    /// the `memchr` / `memmem` difference from the caller.
-    pub enum Iter<'a> {
-        /// Iterator over single-byte matches
-        One(Memchr<'a>),
-        /// Iterator over byte-sequence matches
-        Finder(Box<FindIter<'a, 'a>>),
-    }
-
-    impl<'a> Iterator for Iter<'a> {
-        type Item = usize;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            match self {
-                Iter::One(it) => it.next(),
-                Iter::Finder(it) => it.next(),
+impl<'a> Needle<'a> {
+    /// # Creates an iterator over `needle` matches in `haystack`
+    fn iter(&'a self, haystack: &'a [u8]) -> Iter<'a> {
+        match self {
+            Needle::One(byte) => Iter::One(memchr_iter(*byte, haystack)),
+            Needle::Finder(finder) => {
+                Iter::Finder(Box::new(finder.find_iter(haystack)))
             }
         }
     }
 }
 
-/// # Row-column position for the last byte at the given `source`
+/// # [`Needle`] iterator
 ///
-/// Both row and column are 1-indexed, as in most of text editors. This function
-/// is useful for error messages when there is a need to locate a position in a
-/// text file.
+/// ![](https://github.com/mnmun/images/blob/main/pedestrian.png?raw=true)
 ///
-/// # Example
+/// Provides a unified `iterator` interface over both single-byte
+/// ([`Memchr`]) and multi-byte ([`FindIter`]) match iterators.
 ///
-/// ```rust
-/// use pretty_assertions::assert_eq;
-/// use a_bc::utils::row_col_pos;
+/// ---
 ///
-/// // Four rows
-/// let source =
-/// b"some
-/// kind
-/// of
-/// source";
+/// See the [`module documentation`] for more information.
 ///
-/// // Here is given entire source, so returned position describes position
-/// // of the last byte in source ('e' in the word "source")
-/// assert_eq!(
-///     row_col_pos(source),
-///     (4, 6) // Fourth row and sixth column
-/// );
-///
-/// // Here is given part of source, so returned data describes position
-/// // of the last byte in slice ('d' in the word "kind")
-/// assert_eq!(
-///     row_col_pos(&source[..9]),
-///     (2, 4) // Second row and fourth column
-/// );
-/// ```
-pub fn row_col_pos(source: &[u8]) -> (usize, usize) {
-    let it = memchr_iter(b'\n', source);
+/// [`module documentation`]: crate::utils
+enum Iter<'a> {
+    /// Iterator over single-byte matches
+    One(Memchr<'a>),
+    /// Iterator over multi-byte sequence matches
+    Finder(Box<FindIter<'a, 'a>>),
+}
 
-    let mut row = 1; // because rows start from 1
+impl<'a> Iterator for Iter<'a> {
+    type Item = usize;
 
-    let mut previous_newline_position = 0;
-    let mut current_newline_position = 0;
-    for i in it {
-        row += 1;
-        previous_newline_position = current_newline_position;
-        current_newline_position = i + 1; // + 1 because columns start from 1
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Iter::One(it) => it.next(),
+            Iter::Finder(it) => it.next(),
+        }
     }
-
-    let mut col = source.len() - current_newline_position;
-
-    if col == 0 {
-        row -= 1;
-        col = current_newline_position - previous_newline_position;
-    }
-
-    (row, col)
 }
 
 /// # Count occurrences of `needle` in `haystack`
 ///
-/// Under the hood this function uses [`memchr`] crate to iterate through
-/// `haystack`, so it uses [`memchr_needle::Kind`].
+/// Implemented on top of the [`memchr`] crate.
 ///
 /// # Example
 ///
 /// ```rust
 /// use pretty_assertions::assert_eq;
-/// use a_bc::utils::{memchr_needle, memchr_count_needles};
+/// use a_bc::utils::{Needle, count_needles};
 ///
 /// let source = b"some kind of source";
 /// // Count 'o'    ^        ^   ^
 ///
-/// assert_eq!(
-///     memchr_count_needles(
-///         &memchr_needle::Kind::One(b'o'),
-///         source
-///     ),
-///     3
-/// );
+/// assert_eq!(count_needles(&Needle::One(b'o'), source), 3);
 /// ```
-pub fn memchr_count_needles<'a>(
-    needle: &memchr_needle::Kind<'a>,
-    haystack: &[u8],
-) -> usize {
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`module documentation`]: crate::utils
+pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
     needle.iter(haystack).count()
 }
 
-/// # Count occurrences of `needle` in `haystack`, ignoring `escaped` ones
+/// # Count occurrences of `needle` in `haystack`, ignoring `escaped` matches
 ///
 /// A match is counted only when the number of consecutive `escape` bytes
 /// immediately before it is even; an odd count means the match itself is
-/// escaped and skipped. For example, with `b"\"` as an `escape`, in `haystack`
+/// escaped and skipped. For example, with `br"\"` as an `escape`, in `haystack`
 /// `a\\,b` counts the comma, while `a\,b` does not (backslash escapes the
 /// comma).
 ///
-/// Under the hood this function uses [`memchr`] crate to iterate through
-/// `haystack`, so it uses [`memchr_needle::Kind`].
+/// Implemented on top of the [`memchr`] crate.
 ///
 /// # Example
 ///
 /// ```rust
 /// use pretty_assertions::assert_eq;
-/// use a_bc::utils::{memchr_needle, memchr_count_needles_considering_escapes};
+/// use a_bc::utils::{Needle, count_needles_considering_escapes};
 ///
-/// let source = b"s\\ome kind of s\\ource";
-/// // Count 'o'               ^
+/// let source = br"s\ome kind of s\\ource";
+/// // Count 'o'      X        ^     ^
 ///
 /// assert_eq!(
-///     memchr_count_needles_considering_escapes(
-///         &memchr_needle::Kind::One(b'o'),
-///         b"\\",
+///     count_needles_considering_escapes(
+///         &Needle::One(b'o'),
+///         br"\",
 ///         source
 ///     ),
-///     1
+///     2
 /// );
 /// ```
-pub fn memchr_count_needles_considering_escapes<'a>(
-    needle: &memchr_needle::Kind<'a>,
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`module documentation`]: crate::utils
+pub fn count_needles_considering_escapes<'a>(
+    needle: &Needle<'a>,
     escape: &'a [u8],
     haystack: &[u8],
 ) -> usize {
@@ -210,33 +183,32 @@ pub fn memchr_count_needles_considering_escapes<'a>(
     counter
 }
 
-/// # Count occurrences of `needle` in `haystack`, ignoring `delimited` ones
+/// # Count occurrences of `needle` in `haystack`, ignoring `delimited` matches
 ///
-/// A `delimiter` toggles the "inside a delimited region" state (e.g. a
-/// `"`-quoted string); matches found while inside are not counted. The running
+/// A `delimiter` toggles the "inside a delimited region" state (e.g. a region
+/// delimited by `"`); matches found while inside are not counted. The running
 /// `delimiter_counter` is updated in place and must be kept across calls so a
 /// region opened in one chunk is still recognized in the next.
 ///
-/// Under the hood this function uses [`memchr`] crate to iterate through
-/// `haystack`, so it uses [`memchr_needle::Kind`].
+/// Implemented on top of the [`memchr`] crate.
 ///
 /// # Example
 ///
 /// ```rust
 /// use pretty_assertions::assert_eq;
 /// use a_bc::utils::{
-///     memchr_needle,
-///     memchr_count_needles_considering_delimiters
+///     Needle,
+///     count_needles_considering_delimiters
 /// };
 ///
-/// let source = b"some \"kind of\" \"source\"";
-/// // Count 'o'    ^
+/// let source = br#"some "kind of" "source""#;
+/// // Count 'o'      ^         X     X
 /// let mut delimiter_count = 0;
 ///
 /// assert_eq!(
-///     memchr_count_needles_considering_delimiters(
-///         &memchr_needle::Kind::One(b'o'),
-///         &memchr_needle::Kind::One(b'"'),
+///     count_needles_considering_delimiters(
+///         &Needle::One(b'o'),
+///         &Needle::One(b'"'),
 ///         &mut delimiter_count,
 ///         source
 ///     ),
@@ -244,9 +216,15 @@ pub fn memchr_count_needles_considering_escapes<'a>(
 /// );
 /// assert_eq!(delimiter_count, 4);
 /// ```
-pub fn memchr_count_needles_considering_delimiters<'a>(
-    needle: &memchr_needle::Kind<'a>,
-    delimiter: &memchr_needle::Kind<'a>,
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`module documentation`]: crate::utils
+pub fn count_needles_considering_delimiters<'a>(
+    needle: &Needle<'a>,
+    delimiter: &Needle<'a>,
     delimiter_counter: &mut usize,
     mut haystack: &[u8],
 ) -> usize {
@@ -257,7 +235,7 @@ pub fn memchr_count_needles_considering_delimiters<'a>(
 
         if let Some(position) = it.next() {
             *delimiter_counter +=
-                memchr_count_needles(delimiter, &haystack[..position]);
+                count_needles(delimiter, &haystack[..position]);
 
             if delimiter_counter.is_multiple_of(2) {
                 count += 1;
@@ -269,7 +247,7 @@ pub fn memchr_count_needles_considering_delimiters<'a>(
                 haystack = &haystack[position + 1..];
             }
         } else {
-            *delimiter_counter += memchr_count_needles(delimiter, haystack);
+            *delimiter_counter += count_needles(delimiter, haystack);
 
             break;
         }
@@ -280,33 +258,32 @@ pub fn memchr_count_needles_considering_delimiters<'a>(
 
 /// # Count occurrences of `needle` in `haystack`, considering `escaped` `delimiters`
 ///
-/// Combines [`memchr_count_needles_considering_delimiters()`] with
-/// [`memchr_count_needles_considering_escapes()`]: delimiters themselves can be
+/// Combines [`count_needles_considering_delimiters()`] with
+/// [`count_needles_considering_escapes()`]: delimiters themselves can be
 /// escaped, and only unescaped ones toggle the "inside a delimited region"
 /// state. `delimiter_counter` is updated in place and must be kept across
 /// calls.
 ///
-/// Under the hood this function uses [`memchr`] crate to iterate through
-/// `haystack`, so it uses [`memchr_needle::Kind`].
+/// Implemented on top of the [`memchr`] crate.
 ///
 /// # Example
 ///
 /// ```rust
 /// use pretty_assertions::assert_eq;
 /// use a_bc::utils::{
-///     memchr_needle,
-///     memchr_count_needles_considering_escaped_delimiters
+///     Needle,
+///     count_needles_considering_escaped_delimiters
 /// };
 ///
-/// let source = b"some \\\"kind of\\\" \"source\"";
-/// // Count 'o'    ^            ^
+/// let source = br#"some \"kind of\" "source""#;
+/// // Count 'o'      ^          ^      X
 /// let mut delimiter_count = 0;
 ///
 /// assert_eq!(
-///     memchr_count_needles_considering_escaped_delimiters(
-///         &memchr_needle::Kind::One(b'o'),
-///         b"\\",
-///         &memchr_needle::Kind::One(b'"'),
+///     count_needles_considering_escaped_delimiters(
+///         &Needle::One(b'o'),
+///         br"\",
+///         &Needle::One(b'"'),
 ///         &mut delimiter_count,
 ///         source
 ///     ),
@@ -314,10 +291,16 @@ pub fn memchr_count_needles_considering_delimiters<'a>(
 /// );
 /// assert_eq!(delimiter_count, 2);
 /// ```
-pub fn memchr_count_needles_considering_escaped_delimiters<'a>(
-    needle: &memchr_needle::Kind<'a>,
+///
+/// ---
+///
+/// See the [`module documentation`] for more information.
+///
+/// [`module documentation`]: crate::utils
+pub fn count_needles_considering_escaped_delimiters<'a>(
+    needle: &Needle<'a>,
     delimiter_escape: &'a [u8],
-    delimiter: &memchr_needle::Kind<'a>,
+    delimiter: &Needle<'a>,
     delimiter_counter: &mut usize,
     mut haystack: &[u8],
 ) -> usize {
@@ -327,7 +310,7 @@ pub fn memchr_count_needles_considering_escaped_delimiters<'a>(
         let mut it = needle.iter(haystack);
 
         if let Some(position) = it.next() {
-            *delimiter_counter += memchr_count_needles_considering_escapes(
+            *delimiter_counter += count_needles_considering_escapes(
                 delimiter,
                 delimiter_escape,
                 &haystack[..position],
@@ -343,7 +326,7 @@ pub fn memchr_count_needles_considering_escaped_delimiters<'a>(
                 haystack = &haystack[position + 1..];
             }
         } else {
-            *delimiter_counter += memchr_count_needles_considering_escapes(
+            *delimiter_counter += count_needles_considering_escapes(
                 delimiter,
                 delimiter_escape,
                 haystack,
@@ -364,9 +347,9 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::utils::{
-        memchr_count_needles_considering_delimiters,
-        memchr_count_needles_considering_escaped_delimiters,
-        memchr_count_needles_considering_escapes, memchr_needle,
+        Needle, count_needles_considering_delimiters,
+        count_needles_considering_escaped_delimiters,
+        count_needles_considering_escapes,
     };
 
     #[test]
@@ -374,9 +357,9 @@ mod tests {
         let haystack = b"hello";
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b'x'),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b'x'),
+                br"\",
                 haystack
             ),
             0
@@ -384,9 +367,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b"x"));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 haystack
             ),
             0
@@ -398,9 +381,9 @@ mod tests {
         let haystack = b"a,b,c";
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b','),
+                br"\",
                 haystack
             ),
             2
@@ -408,9 +391,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 haystack
             ),
             2
@@ -419,12 +402,12 @@ mod tests {
 
     #[test]
     fn count_needles_considering_backslashes_single_escape() {
-        let haystack = b"a,b\\,c";
+        let haystack = br"a,b\,c";
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b','),
+                br"\",
                 haystack
             ),
             1
@@ -432,9 +415,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 haystack
             ),
             1
@@ -443,12 +426,12 @@ mod tests {
 
     #[test]
     fn count_needles_considering_backslashes_double_escape() {
-        let haystack = b"a,b\\\\,c";
+        let haystack = br"a,b\\,c";
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b','),
+                br"\",
                 haystack
             ),
             2
@@ -456,9 +439,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 haystack
             ),
             2
@@ -467,12 +450,12 @@ mod tests {
 
     #[test]
     fn count_needles_considering_backslashes_mixed() {
-        let haystack = b"x,\\,x,,\\\\,";
+        let haystack = br"x,\,x,,\\,";
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b','),
+                br"\",
                 haystack
             ),
             4
@@ -480,9 +463,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 haystack
             ),
             4
@@ -503,9 +486,9 @@ mod tests {
         }
 
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::One(b','),
+                br"\",
                 &haystack
             ),
             500
@@ -513,9 +496,9 @@ mod tests {
 
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escapes(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
+            count_needles_considering_escapes(
+                &Needle::Finder(finder),
+                br"\",
                 &haystack
             ),
             500
@@ -528,9 +511,9 @@ mod tests {
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -541,9 +524,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -558,9 +541,9 @@ mod tests {
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -571,9 +554,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -588,9 +571,9 @@ mod tests {
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -601,9 +584,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -614,13 +597,13 @@ mod tests {
 
     #[test]
     fn count_needles_considering_quotes_inside_quotes() {
-        let haystack = b"\"a,b,c\"";
+        let haystack = br#"  "a,b,c"  "#;
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -631,9 +614,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -644,13 +627,13 @@ mod tests {
 
     #[test]
     fn count_needles_considering_quotes_mixed() {
-        let haystack = b"a,\"b,c\",d,e";
+        let haystack = br#"a,"b,c",d,e"#;
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -661,9 +644,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -674,14 +657,14 @@ mod tests {
 
     #[test]
     fn count_needles_considering_quotes_escaped_quotes() {
-        let haystack = b"a,\"b,\\\"c\",d";
+        let haystack = br#"a,"b\",c"\",d"#;
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_escaped_delimiters(
-                &memchr_needle::Kind::One(b','),
-                b"\\",
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_escaped_delimiters(
+                &Needle::One(b','),
+                br"\",
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -692,10 +675,10 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_escaped_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                b"\\",
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_escaped_delimiters(
+                &Needle::Finder(finder),
+                br"\",
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -706,13 +689,13 @@ mod tests {
 
     #[test]
     fn count_needles_considering_quotes_complex() {
-        let haystack = b"a,b,\"c,d\",e,\"f\",g,h";
+        let haystack = br#"a,b,"c,d",e,"f",g,h"#;
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -723,9 +706,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -751,9 +734,9 @@ mod tests {
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 &haystack,
             ),
@@ -764,9 +747,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 &haystack,
             ),
@@ -777,13 +760,13 @@ mod tests {
 
     #[test]
     fn count_needles_considering_quotes_custom_chunk_size() {
-        let haystack = b"a,b,\"c,d\",e,f";
+        let haystack = br#"a,b,"c,d",e,f"#;
 
         let mut quotes = 0;
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::One(b','),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::One(b','),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
@@ -794,9 +777,9 @@ mod tests {
         let mut quotes = 0;
         let finder = Rc::new(Finder::new(b","));
         assert_eq!(
-            memchr_count_needles_considering_delimiters(
-                &memchr_needle::Kind::Finder(finder),
-                &memchr_needle::Kind::One(b'"'),
+            count_needles_considering_delimiters(
+                &Needle::Finder(finder),
+                &Needle::One(b'"'),
                 &mut quotes,
                 haystack,
             ),
