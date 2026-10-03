@@ -4,17 +4,19 @@
 //!
 //! Provides the following traits:
 //!
-//! - [`KindBounds`] - a blanket bound that any user-defined token kind type
-//!   must satisfy;
-//! - [`InnerRange`] - enables a token kind to describe its own inner range, so
-//!   delimited tokens can expose their contents without the delimiters.
+//! - [`KindBounds`] - a blanket bound that any user-defined [`token`] `kind`
+//!   type must satisfy;
+//! - [`InnerRange`] - enables a [`token`] `kind` to describe its own inner
+//!   range, so delimited [`tokens`] can expose their contents without the
+//!   delimiters.
 //!
 //! ---
 //!
-//! See the [`crate documentation`] for more information.
+//! See the [`crate`] documentation for more information.
 //!
 //! [`Token`]: crate::Token
-//! [`crate documentation`]: crate
+//! [`token`]: crate::Token
+//! [`tokens`]: crate::Token
 
 use std::{
     fmt::{Debug, Display},
@@ -30,7 +32,9 @@ use std::{
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
+///
+/// [`module`]: crate::traits
 pub trait KindBounds: PartialEq + Clone + Copy + Debug + Display {}
 impl<T> KindBounds for T where T: PartialEq + Clone + Copy + Debug + Display {}
 
@@ -43,7 +47,9 @@ impl<T> KindBounds for T where T: PartialEq + Clone + Copy + Debug + Display {}
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
+///
+/// [`module`]: crate::traits
 pub trait InnerRange {
     /// # Returns the token inner range if it exists, otherwise `None`
     fn inner_range(&self, range: &Range<usize>) -> Option<Range<usize>>;

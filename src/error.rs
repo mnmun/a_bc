@@ -22,15 +22,14 @@
 //!
 //! ---
 //!
-//! See the [`crate documentation`] for usage example.
+//! See the [`crate`] documentation for usage example.
 //!
-//! [`lexer`]: Lexer
-//! [`Token`]: Token
-//! [`position`]: Position
-//! [`token error`]: Token
+//! [`lexer`]: crate::Lexer
+//! [`Token`]: crate::Token
+//! [`position`]: crate::error::Position
+//! [`token error`]: crate::error::Token
 //! [`lexer's`]: crate::Lexer
 //! [`source`]: crate::lexer::Data::source()
-//! [`crate documentation`]: crate
 
 use std::{error, fmt};
 
@@ -47,11 +46,11 @@ use crate::traits::KindBounds;
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`lexer`]: Lexer
-/// [`token`]: Token
-/// [`module documentation`]: crate::error
+/// [`lexer`]: crate::error::Lexer
+/// [`token`]: crate::error::Token
+/// [`module`]: crate::error
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum Error<Kind>
 where
@@ -98,10 +97,10 @@ impl<Kind: KindBounds + 'static> error::Error for Error<Kind> {
 ///
 /// ![](https://github.com/mnmun/images/blob/main/question.png?raw=true)
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
 /// [`Lexer`]: crate::Lexer
-/// [`module documentation`]: crate::error
+/// [`module`]: crate::error
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub enum Lexer {
     /// The [`source`] data is empty
@@ -137,10 +136,10 @@ impl error::Error for Lexer {
 ///
 /// ![](https://github.com/mnmun/images/blob/main/question.png?raw=true)
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
 /// [`token`]: crate::Token
-/// [`module documentation`]: crate::error
+/// [`module`]: crate::error
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub enum Token<Kind: KindBounds> {
     /// A closing delimiter could not be found
@@ -152,8 +151,8 @@ pub enum Token<Kind: KindBounds> {
         /// The expected location of the missing closing delimiter,
         /// expressed as a [`relation`] to a [`position`] in the source
         ///
-        /// [`relation`]: Relation
-        /// [`position`]: Position
+        /// [`relation`]: crate::error::Relation
+        /// [`position`]: crate::error::Position
         location: (Relation, Position),
     },
 
@@ -292,7 +291,7 @@ impl<Kind: KindBounds> error::Error for Token<Kind> {
     }
 }
 
-/// # Row-column position in the text file
+/// # Row-column `position` in the text file
 ///
 /// ![](https://github.com/mnmun/images/blob/main/xy.png?raw=true)
 ///
@@ -302,9 +301,9 @@ impl<Kind: KindBounds> error::Error for Token<Kind> {
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::error
+/// [`module`]: crate::error
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Getters)]
 #[getset(get = "pub")]
 pub struct Position {
@@ -319,7 +318,7 @@ pub struct Position {
 impl Position {
     /// # Creates a new [`position`] with the given `row` and `col`
     ///
-    /// [`position`]: Position
+    /// [`position`]: crate::error::Position
     pub fn new(row: usize, col: usize) -> Self {
         Self { row, col }
     }
@@ -340,20 +339,20 @@ impl From<(usize, usize)> for Position {
     }
 }
 
-/// # Spatial relation to a [`position`]
+/// # Spatial `relation` to a [`position`]
 ///
 /// ![](https://github.com/mnmun/images/blob/main/arrows.png?raw=true)
 ///
-/// Describes the spatial relation of an `error` location to a [`position`]
+/// Describes the spatial `relation` of an `error` location to a [`position`]
 /// within the [`source`] data.
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`position`]: Position
+/// [`position`]: crate::error::Position
 /// [`source`]: crate::lexer::Data::source()
-/// [`module documentation`]: crate::error
+/// [`module`]: crate::error
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Relation {
     Before,
@@ -376,8 +375,8 @@ impl fmt::Display for Relation {
 /// Both row and column are 1-indexed, consistent with the convention used by
 /// common text editors.
 ///
-/// Is intended to be used in error messages when the position within a source
-/// file must be determined.
+/// Is intended to be used in error messages when the [`position`] within a
+/// source file must be determined.
 ///
 /// # Example
 ///
@@ -404,6 +403,8 @@ impl fmt::Display for Relation {
 /// assert_eq!(*position.row(), 2); // Second row
 /// assert_eq!(*position.col(), 4); // Fourth column
 /// ```
+///
+/// [`position`]: crate::error::Position
 pub fn row_col_pos(source: &[u8]) -> Position {
     let it = memchr_iter(b'\n', source);
 

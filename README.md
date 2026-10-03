@@ -26,7 +26,7 @@ In addition, this crate reexports the `memchr` crate for use in token-creation l
 
 ![](https://github.com/mnmun/images/blob/main/bulb.png?raw=true)
 
-The following example demonstrates a lexer that distinguishes double-quoted strings and commas. Commas and strings may be separated by any number of ASCII whitespace characters.
+The following example demonstrates a `lexer` that distinguishes double-quoted strings and commas. Commas and strings may be separated by any number of ASCII whitespace characters.
 
 ```rust
 use std::{fmt, ops::Range};

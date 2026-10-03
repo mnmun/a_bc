@@ -37,9 +37,9 @@ use std::rc::Rc;
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 pub enum Needle<'a> {
     /// A single-byte pattern
     One(u8),
@@ -68,9 +68,9 @@ impl<'a> Needle<'a> {
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 enum Iter<'a> {
     /// Iterator over single-byte matches
     One(Memchr<'a>),
@@ -107,9 +107,9 @@ impl<'a> Iterator for Iter<'a> {
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
     needle.iter(haystack).count()
 }
@@ -145,9 +145,9 @@ pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 pub fn count_needles_considering_escapes<'a>(
     needle: &Needle<'a>,
     escape: &'a [u8],
@@ -219,9 +219,9 @@ pub fn count_needles_considering_escapes<'a>(
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 pub fn count_needles_considering_delimiters<'a>(
     needle: &Needle<'a>,
     delimiter: &Needle<'a>,
@@ -294,9 +294,9 @@ pub fn count_needles_considering_delimiters<'a>(
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`module documentation`]: crate::utils
+/// [`module`]: crate::utils
 pub fn count_needles_considering_escaped_delimiters<'a>(
     needle: &Needle<'a>,
     delimiter_escape: &'a [u8],

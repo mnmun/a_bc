@@ -2,29 +2,28 @@
 //!
 //! ![](https://github.com/mnmun/images/blob/main/batteries.png?raw=true)
 //!
-//! Provides the essentials for the custom lexers:
+//! Provides the essentials for the custom `lexers`:
 //!
 //! - [`Lexer`] - the scanning engine that traverses the [`source`] and produces
 //!   [`tokens`];
-//! - [`Data`] - holds the input data: the [`source bytes`] and the
-//!   [`active scan range`] within which the [`lexer`] operates;
-//! - [`Cursor`] - records the [`currently observed byte`] and its [`position`]
+//! - [`Data`] - holds the the [`source`] bytes and the active scan [`range`]
+//!   within which the [`lexer`] operates;
+//! - [`Cursor`] - records the currently observed [`byte`] and its [`position`]
 //!   in the [`source`]'
 //! - [`Builder`] - an instrument for the configuration and creation of a
 //!   [`lexer`].
 //!
 //! ---
 //!
-//! See the [`crate documentation`] for more information.
+//! See the [`crate`] documentation for more information.
 //!
-//! [`source`]: Data::source()
-//! [`source bytes`]: Data::source()
+//! [`source`]: crate::lexer::Data::source()
 //! [`tokens`]: crate::Token
-//! [`active scan range`]: Data::range()
-//! [`lexer`]: Lexer
-//! [`currently observed byte`]: Cursor::byte()
-//! [`position`]: Cursor::position()
-//! [`crate documentation`]: crate
+//! [`range`]: crate::lexer::Data::range()
+//! [`lexer`]: crate::Lexer
+//! [`byte`]: crate::lexer::Cursor::byte()
+//! [`position`]: crate::lexer::Cursor::position()
+//! [`crate`]: crate
 
 use core::fmt::Debug;
 use std::{borrow::Cow, ops::Range};
@@ -37,34 +36,34 @@ use crate::{Cancel, error};
 ///
 /// ![](https://github.com/mnmun/images/blob/main/book.png?raw=true)
 ///
-/// Holds the data processed by the [`lexer`] and stores the following fields:
+/// Holds the `data` processed by the [`lexer`] and stores the following fields:
 ///
 /// - [`source`] - a collection of `u8` values that the [`lexer`] iterates over
 ///   in order to produce [`tokens`];
-/// - [`range`] - the active scan range within [`source`] in which the [`lexer`]
+/// - [`range`] - the active scan `range` within [`source`] in which the [`lexer`]
 ///   operates.
 ///
 /// Is created automatically during the [`build()`] call.
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`lexer`]: Lexer
-/// [`source`]: Data::source()
+/// [`lexer`]: crate::Lexer
+/// [`source`]: crate::lexer::Data::source()
 /// [`tokens`]: crate::Token
-/// [`range`]: Data::range()
-/// [`build()`]: Builder::build()
-/// [`module documentation`]: crate::lexer
+/// [`range`]: crate::lexer::Data::range()
+/// [`build()`]: crate::lexer::Builder::build()
+/// [`module`]: crate::lexer
 #[derive(Debug, PartialEq, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Data<'a> {
-    /// # The source bytes provided as input
+    /// # The `source` bytes provided as input
     source: Cow<'a, [u8]>,
 
-    /// # The active scan range within [`source`]
+    /// # The active scan `range` within [`source`]
     ///
-    /// [`source`]: Data::source()
+    /// [`source`]: crate::lexer::Data::source()
     range: Range<usize>,
 }
 
@@ -76,34 +75,33 @@ pub struct Data<'a> {
 /// following state:
 ///
 /// - [`byte`] - the `u8` value currently observed in the [`source`];
-/// - [`position`] - the position of [`currently observed byte`] in the
+/// - [`position`] - the position of currently observed [`byte`] in the
 ///   [`source`].
 ///
 /// Is created automatically during the [`build()`] call.
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`source`]: Data::source()
-/// [`byte`]: Cursor::byte()
-/// [`currently observed byte`]: Cursor::byte()
-/// [`position`]: Cursor::position()
-/// [`lexer`]: Lexer
-/// [`build()`]: Builder::build()
-/// [`module documentation`]: crate::lexer
+/// [`source`]: crate::lexer::Data::source()
+/// [`byte`]: crate::lexer::Cursor::byte()
+/// [`position`]: crate::lexer::Cursor::position()
+/// [`lexer`]: crate::Lexer
+/// [`build()`]: crate::lexer::Builder::build()
+/// [`module`]: crate::lexer
 #[derive(Debug, PartialEq, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Cursor {
-    /// # The byte currently observed in the [`source`]
+    /// # The `byte` currently observed in the [`source`]
     ///
-    /// [`source`]: Data::source()
+    /// [`source`]: crate::lexer::Data::source()
     byte: Option<u8>,
 
-    /// # The position of the [`currently observed byte`] in the [`source`]
+    /// # The `position` of the currently observed [`byte`] in the [`source`]
     ///
-    /// [`currently observed byte`]: Cursor::byte()
-    /// [`source`]: Data::source()
+    /// [`byte`]: crate::lexer::Cursor::byte()
+    /// [`source`]: crate::lexer::Data::source()
     position: usize,
 }
 
@@ -120,53 +118,53 @@ pub struct Cursor {
 ///
 /// Optional attributes:
 ///
-/// - [`range`] - the active scan range within [`source`]; if not specified,
+/// - [`range`] - the active scan `range` within [`source`]; if not specified,
 ///   the full extent of [`source`] is used;
-/// - [`position`] - the initial position of the [`cursor`]; if not specified,
-///   defaults to the start of the [`active scan range`].
+/// - [`position`] - the initial `position` of the [`cursor`]; if not specified,
+///   defaults to the start of the active scan [`range`].
 ///
 /// After setting all the necessary fields, call the [`build()`] method to get
 /// a [`lexer`] instance.
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`lexer`]: Lexer
-/// [`source`]: Data::source()
+/// [`lexer`]: crate::Lexer
+/// [`source`]: crate::lexer::Data::source()
 /// [`token`]: crate::Token
-/// [`range`]: Data::range()
-/// [`position`]: Cursor::position()
-/// [`cursor`]: Cursor
-/// [`active scan range`]: Data::range()
-/// [`build()`]: Builder::build()
-/// [`module documentation`]: crate::lexer
+/// [`range`]: crate::lexer::Data::range()
+/// [`position`]: crate::lexer::Cursor::position()
+/// [`cursor`]: crate::lexer::Cursor
+/// [`build()`]: crate::lexer::Builder::build()
+/// [`module`]: crate::lexer
 #[derive(Debug, Getters, MutGetters)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Builder<'a> {
-    /// # The source bytes used as input
+    /// # The `source` bytes used as input
     source: Cow<'a, [u8]>,
 
-    /// # Optional active range
+    /// # Optional active `range`
     ///
     /// If not specified, the full extent of [`source`] is used.
     ///
     /// [`source`]: Builder::source()
     range: Option<Range<usize>>,
 
-    /// # Optional starting position
+    /// # Optional [`cursor`] starting `position`
     ///
-    /// If not specified, defaults to the start of the [`active scan range`].
+    /// If not specified, defaults to the start of the active scan [`range`].
     ///
-    /// [`active scan range`]: Builder::range()
+    /// [`cursor`]: crate::lexer::Cursor
+    /// [`range`]: crate::lexer::Builder::range()
     position: Option<usize>,
 
     /// # Optional [`cancellation flag`]
     ///
     /// If not specified the separate [`flag`] will be created automatically.
     ///
-    /// [`cancellation flag`]: Cancel
-    /// [`flag`]: Cancel
+    /// [`cancellation flag`]: crate::Cancel
+    /// [`flag`]: crate::Cancel
     flag: Option<Cancel>,
 }
 
@@ -219,7 +217,7 @@ impl<'a> Builder<'a> {
 impl<'a> Builder<'a> {
     /// # Creates a new [`builder`] over `source`
     ///
-    /// [`builder`]: Builder
+    /// [`builder`]: crate::lexer::Builder
     pub fn new(source: impl Into<Cow<'a, [u8]>>) -> Self {
         let source = source.into();
         Self {
@@ -242,14 +240,14 @@ impl<'a> Builder<'a> {
     ///
     /// ---
     ///
-    /// See the [`builder documentation`] for more information.
+    /// See the [`builder`] documentation for more information.
     ///
-    /// [`lexer`]: Lexer
-    /// [`range`]: Data::range()
-    /// [`cursor`]: Cursor
-    /// [`position`]: Cursor::position()
-    /// [`byte`]: Cursor::byte()
-    /// [`builder documentation`]: Builder
+    /// [`lexer`]: crate::Lexer
+    /// [`range`]: crate::lexer::Data::range()
+    /// [`cursor`]: crate::lexer::Cursor
+    /// [`position`]: crate::lexer::Cursor::position()
+    /// [`byte`]: crate::lexer::Cursor::byte()
+    /// [`builder`]: crate::lexer::Builder
     pub fn build(self) -> Result<Lexer<'a>, error::Lexer> {
         if self.source.is_empty() {
             return Err(error::Lexer::SourceIsEmpty);
@@ -282,7 +280,7 @@ impl<'a> Builder<'a> {
 ///
 /// ![](https://github.com/mnmun/images/blob/main/eye.png?raw=true)
 ///
-/// Represents the scanning engine for the custom lexers and exposes the
+/// Represents the scanning engine for the custom `lexers` and exposes the
 /// following scanning methods:
 ///
 /// - [`read_next_byte()`] - advances the [`cursor`] by one byte;
@@ -290,57 +288,57 @@ impl<'a> Builder<'a> {
 ///   [`cursor`];
 /// - [`skip_whitespace()`] - skips over [`ASCII whitespace bytes`].
 ///
-/// All operations listed above are constrained to the [`active scan range`].
+/// All operations listed above are constrained to the active scan [`range`].
 ///
 /// Use the following methods to inspect current `lexer` state:
 ///
-/// - [`data()`] - the [`source bytes`] and the [`active scan range`];
-/// - [`cursor()`] - the [`currently observed byte`] and its [`position`] within
+/// - [`data()`] - the [`source`] bytes and the active scan [`range`];
+/// - [`cursor()`] - the currently observed [`byte`] and its [`position`] within
 ///   the [`source`];
 /// - [`flag()`] - a cloneable thread-safe [`cancellation flag`].
 ///
-/// Use [`builder`] to create an instance.
+/// Use the [`builder`] to create an instance.
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`read_next_byte()`]: Lexer::read_next_byte()
-/// [`peek_next_byte()`]: Lexer::peek_next_byte()
-/// [`skip_whitespace()`]: Lexer::skip_whitespace()
+/// [`read_next_byte()`]: crate::Lexer::read_next_byte()
+/// [`peek_next_byte()`]: crate::Lexer::peek_next_byte()
+/// [`skip_whitespace()`]: crate::Lexer::skip_whitespace()
 /// [`ASCII whitespace bytes`]: u8::is_ascii_whitespace
-/// [`byte`]: Cursor::byte()
-/// [`cursor`]: Cursor
-/// [`active scan range`]: Data::range()
-/// [`data()`]: Lexer::data()
-/// [`cursor()`]: Lexer::cursor()
-/// [`flag()`]: Lexer::flag()
-/// [`cancellation flag`]: Cancel
-/// [`source bytes`]: Data::source()
-/// [`currently observed byte`]: Cursor::byte()
-/// [`position`]: Cursor::position()
-/// [`source`]: Data::source()
-/// [`builder`]: Builder
-/// [`module documentation`]: crate::lexer
+/// [`byte`]: crate::lexer::Cursor::byte()
+/// [`cursor`]: crate::lexer::Cursor
+/// [`range`]: crate::lexer::Data::range()
+/// [`data()`]: crate::Lexer::data()
+/// [`cursor()`]: crate::Lexer::cursor()
+/// [`flag()`]: crate::Lexer::flag()
+/// [`cancellation flag`]: crate::Cancel
+/// [`source bytes`]: crate::lexer::Data::source()
+/// [`currently observed byte`]: crate::lexer::Cursor::byte()
+/// [`position`]: crate::lexer::Cursor::position()
+/// [`source`]: crate::lexer::Data::source()
+/// [`builder`]: crate::lexer::Builder
+/// [`module`]: crate::lexer
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Lexer<'a> {
-    /// The [`source bytes`] and the [`active scan range`]
+    /// # The [`source`] bytes and the active scan [`range`]
     ///
-    /// [`source bytes`]: Data::source()
-    /// [`active scan range`]: Data::range()
+    /// [`source`]: crate::lexer::Data::source()
+    /// [`range`]: crate::lexer::Data::range()
     data: Data<'a>,
 
-    /// # The [`currently observed byte`] and its [`position`] within the [`source`]
+    /// # The currently observed [`byte`] and its [`position`] within the [`source`]
     ///
-    /// [`currently observed byte`]: Cursor::byte()
-    /// [`position`]: Cursor::position()
-    /// [`source`]: Data::source()
+    /// [`byte`]: crate::lexer::Cursor::byte()
+    /// [`position`]: crate::lexer::Cursor::position()
+    /// [`source`]: crate::lexer::Data::source()
     cursor: Cursor,
 
     /// # The shared [`cancellation flag`]
     ///
-    /// [`cancellation flag`]: Cancel
+    /// [`cancellation flag`]: crate::Cancel
     /// [`token`]: crate::Token
     flag: Cancel,
 }
@@ -364,10 +362,10 @@ impl<'a> PartialEq for Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    /// # Moves the [`cursor`] to the specified `position` and updates the [`currently observed byte`] accordingly
+    /// # Moves the [`cursor`] to the specified `position` and updates the currently observed [`byte`]
     ///
-    /// [`cursor`]: Cursor
-    /// [`currently observed byte`]: Cursor::byte()
+    /// [`cursor`]: crate::lexer::Cursor
+    /// [`byte`]: crate::lexer::Cursor::byte()
     pub fn set_position(&mut self, value: usize) -> &mut Self {
         self.cursor.position = value;
         self.cursor.byte = self.data.source.get(value).cloned();
@@ -378,8 +376,8 @@ impl<'a> Lexer<'a> {
 impl<'a> Lexer<'a> {
     /// # Advances the [`cursor`] by one byte and returns the observed [`byte`]
     ///
-    /// [`cursor`]: Cursor
-    /// [`byte`]: Cursor::byte()
+    /// [`cursor`]: crate::lexer::Cursor
+    /// [`byte`]: crate::lexer::Cursor::byte()
     pub fn read_next_byte(&mut self) -> Option<u8> {
         if self.cursor.byte.is_some() {
             let next_position = self.cursor.position + 1;
@@ -400,8 +398,8 @@ impl<'a> Lexer<'a> {
 
     /// # Returns the next [`byte`] without advancing the [`cursor`]
     ///
-    /// [`byte`]: Cursor::byte()
-    /// [`cursor`]: Cursor
+    /// [`byte`]: crate::lexer::Cursor::byte()
+    /// [`cursor`]: crate::lexer::Cursor
     pub fn peek_next_byte(&mut self) -> Option<u8> {
         let next_position = self.cursor.position + 1;
 
@@ -414,7 +412,7 @@ impl<'a> Lexer<'a> {
 
     /// # Moves the [`cursor`] past any [`ASCII whitespace bytes`]
     ///
-    /// [`cursor`]: Cursor
+    /// [`cursor`]: crate::lexer::Cursor
     /// [`ASCII whitespace bytes`]: u8::is_ascii_whitespace
     pub fn skip_whitespace(&mut self) {
         while let Some(current_byte) = &self.cursor.byte {

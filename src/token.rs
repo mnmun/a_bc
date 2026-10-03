@@ -6,10 +6,9 @@
 //!
 //! ---
 //!
-//! See the [`crate documentation`] for more information.
+//! See the [`crate`] documentation for more information.
 //!
-//! [`token`]: Token
-//! [`crate documentation`]: crate
+//! [`token`]: crate::Token
 
 use getset::Getters;
 use std::{fmt, ops::Range};
@@ -29,20 +28,21 @@ use crate::traits::{InnerRange, KindBounds};
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
 /// [`source`]: crate::lexer::Data::source()
-/// [`new()`]: Token::new()
+/// [`new()`]: crate::Token::new()
 /// [`KindBounds`]: crate::traits::KindBounds
-/// [`module documentation`]: crate::token
+/// [`module`]: crate::token
 #[derive(Debug, PartialEq, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Token<Kind: KindBounds> {
-    /// # The user-defined token kind
+    /// # The user-defined token `kind`
     kind: Kind,
 
-    /// # The byte range occupied by the token within the [`source`] data
+    /// # The byte `range` occupied by the [`token`] within the [`source`] data
     ///
+    /// [`token`]: crate::Token
     /// [`source`]: crate::lexer::Data::source()
     range: Range<usize>,
 }
@@ -50,7 +50,7 @@ pub struct Token<Kind: KindBounds> {
 impl<Kind: KindBounds> Token<Kind> {
     /// # Creates a new [`token`] with the given `kind` and byte `range`
     ///
-    /// [`token`]: Token
+    /// [`token`]: crate::Token
     pub fn new(kind: Kind, range: Range<usize>) -> Self {
         Self { kind, range }
     }
@@ -61,7 +61,7 @@ impl<Kind: KindBounds + InnerRange> Token<Kind> {
     ///
     /// ---
     ///
-    /// See the [`InnerRange`] for more information.
+    /// See the [`InnerRange`] documentation for more information.
     pub fn inner_range(&self) -> Option<Range<usize>> {
         self.kind.inner_range(self.range())
     }

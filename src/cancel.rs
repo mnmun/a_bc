@@ -1,4 +1,4 @@
-//! # A cloneable thread-safe cancellation flag
+//! # Cloneable thread-safe cancellation flag
 //!
 //! ![](https://github.com/mnmun/images/blob/main/stop.png?raw=true)
 //!
@@ -6,10 +6,9 @@
 //!
 //! ---
 //!
-//! See the [`crate documentation`] for usage example.
+//! See the [`crate`] documentation for usage example.
 //!
-//! [`cancel`]: Cancel
-//! [`crate documentation`]: crate
+//! [`cancel`]: crate::Cancel
 
 use std::sync::{
     Arc,
@@ -18,7 +17,7 @@ use std::sync::{
 
 use getset::Getters;
 
-/// # A cloneable thread-safe cancellation flag
+/// # Cloneable thread-safe cancellation flag
 ///
 /// ![](https://github.com/mnmun/images/blob/main/stop.png?raw=true)
 ///
@@ -45,12 +44,12 @@ use getset::Getters;
 ///
 /// ---
 ///
-/// See the [`module documentation`] for more information.
+/// See the [`module`] documentation for more information.
 ///
-/// [`cancel()`]: Cancel::cancel()
-/// [`is_cancelled()`]: Cancel::is_cancelled()
-/// [`requested`]: Cancel::cancel()
-/// [`module documentation`]: crate::cancel
+/// [`cancel()`]: crate::Cancel::cancel()
+/// [`is_cancelled()`]: crate::Cancel::is_cancelled()
+/// [`requested`]: crate::Cancel::cancel()
+/// [`module`]: crate::cancel
 #[repr(transparent)]
 #[derive(Clone, Debug, Getters, Default)]
 pub struct Cancel(Arc<AtomicBool>);
@@ -58,14 +57,14 @@ pub struct Cancel(Arc<AtomicBool>);
 impl Cancel {
     /// # Creates a new [`cancellation flag`] in the non-cancelled state (`false`)
     ///
-    /// [`cancellation flag`]: Cancel
+    /// [`cancellation flag`]: crate::Cancel
     pub fn new() -> Self {
         Self::default()
     }
 
     /// # Returns `true` if cancellation has been [`requested`], and `false` otherwise
     ///
-    /// [`requested`]: Cancel::cancel()
+    /// [`requested`]: crate::Cancel::cancel()
     pub fn is_cancelled(&self) -> bool {
         self.0.load(Ordering::Acquire)
     }
