@@ -111,17 +111,23 @@ pub struct Cursor {
 ///
 /// Holds the data used for the [`lexer`] creation.
 ///
-/// Mandatory attributes:
+/// ## Creation
+///
+/// Can be created using the [`Builder::new()`] method.
+///
+/// ## Mandatory attributes:
 ///
 /// - [`source`] - the collection of `u8` values to be iterated over and used
 ///   in [`token`] creation.
 ///
-/// Optional attributes:
+/// ## Optional attributes:
 ///
 /// - [`range`] - the active scan `range` within [`source`]; if not specified,
 ///   the full extent of [`source`] is used;
 /// - [`position`] - the initial `position` of the [`cursor`]; if not specified,
 ///   defaults to the start of the active scan [`range`].
+///
+/// ## Build
 ///
 /// After setting all the necessary fields, call the [`build()`] method to get
 /// a [`lexer`] instance.
