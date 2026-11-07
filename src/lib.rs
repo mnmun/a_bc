@@ -244,6 +244,7 @@ pub mod traits;
 pub mod utils;
 
 pub use cancel::Cancel;
+pub use error::Error;
 pub use lexer::Lexer;
 pub use memchr;
 pub use token::Token;
