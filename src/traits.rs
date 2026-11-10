@@ -52,5 +52,9 @@ impl<T> KindBounds for T where T: PartialEq + Clone + Copy + Debug + Display {}
 /// [`module`]: crate::traits
 pub trait InnerRange {
     /// # Returns the token inner range if it exists, otherwise `None`
+    ///
+    /// See the [`InnerRange`] documentation for more information.
+    ///
+    /// [`InnerRange`]: crate::traits::InnerRange
     fn inner_range(&self, range: &Range<usize>) -> Option<Range<usize>>;
 }

@@ -1,10 +1,8 @@
-![](https://github.com/mnmun/a_bc/blob/main/logo.png?raw=true)
+# a_bc
 
-A minimal set of tools for building small simple lexers
+Provides the building blocks for simple custom lexers:
 
-Provides the essential building blocks for simple custom lexers:
-
-- `Lexer` - the scanning engine that traverses the `source` and produces `tokens`;
+- `Lexer` - the scanning engine that iterates the `source` and produces `tokens`;
 - `Token` - a lexed unit of text represented by a user-defined `kind` and the byte `range` that it occupies within the `source` data.
 
 ## Byte-counting utilities
@@ -18,9 +16,7 @@ This crate also provides the following byte-counting utilities implemented on to
 - `count_needles_considering_delimiters()`;
 - `count_needles_considering_escaped_delimiters()`.
 
-An example of using a `lexer` and functions listed above is the lexer from the [`lazy_json`](https://github.com/mnmun/lazy_json) crate.
-
-In addition, this crate reexports the `memchr` crate for use in token-creation logic.
+An example of using a `lexer` and functions listed above can be found in the [`lazy_json`](https://github.com/mnmun/lazy_json) crate.
 
 ## Example
 
@@ -28,17 +24,9 @@ In addition, this crate reexports the `memchr` crate for use in token-creation l
 
 The following example demonstrates a `lexer` that distinguishes double-quoted strings and commas. Commas and strings may be separated by any number of ASCII whitespace characters.
 
+To begin, we need to define the token kinds. Let's categorize tokens into the following kinds: `Comma`, `String` and an `Unexpected` kind which will group all `tokens` not included in the `Comma` and `String` categories:
+
 ```rust
-use std::{fmt, ops::Range};
-use pretty_assertions::assert_eq;
-
-use a_bc::{
-    error::{self, Error, Position, Relation, row_col_pos},
-    lexer::{Lexer, Builder},
-    token::Token,
-    traits::KindBounds,
-};
-
 // Token kinds
 #[derive(PartialEq, Clone, Copy, Debug)]
 enum Kind {
@@ -61,22 +49,26 @@ impl fmt::Display for Kind {
         }
     }
 }
+```
 
-// `Kind` must satisfy the `KindBounds` trait
+It is important that the declared `token` kinds satisfy the `KindBounds` trait:
+
+```rust
 #[allow(dead_code)]
-fn assert_properties() {
+fn assert_bounds() {
     use a_bc::traits::KindBounds;
     fn check<T: KindBounds>() {}
     check::<Kind>();
 }
+```
 
-// A newtype wrapper for the specific lexer
+Now we can define a newtype wrapper `DemoLexer` around the `lexer` and implement the specific logic for `token` creation using the `Iterator` trait:
+
+```rust
 #[repr(transparent)]
-struct DemoLexer<'a>(Lexer<'a>);
+struct DemoLexer<'source>(Lexer<'source>);
 
-// Implements the `Iterator` trait to enable straightforward iteration
-// over tokens
-impl<'a> Iterator for DemoLexer<'a> {
+impl Iterator for DemoLexer<'_> {
     type Item = Result<Token<Kind>, Error<Kind>>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -91,64 +83,77 @@ impl<'a> Iterator for DemoLexer<'a> {
         // tabs, etc.)
         self.0.skip_whitespace();
 
-        let token = self.0.cursor().byte().and_then(|byte| {
-            Some(match byte {
-                // If the current byte is a comma, the token is exactly one
-                // byte long
-                b',' => Ok(Token::new(
-                    Kind::Comma,
-                    *self.0.cursor().position()..self.0.cursor().position() + 1
-                )),
-                // If the current byte is a quote, consumes every byte until
-                // the closing quote or the end of the source
-                b'"' => {
-                    // Remember the initial start position
-                    let start = *self.0.cursor().position();
+        let token: Option<Result<Token<Kind>, Error<Kind>>> =
+            self.0.cursor().byte().and_then(|byte: u8| {
+                Some(match byte {
+                    // If the current byte is a comma, the token is exactly one
+                    // byte long
+                    b',' => Ok(Token::new(
+                        Kind::Comma,
+                        *self.0.cursor().position()
+                            ..self.0.cursor().position() + 1,
+                    )),
+                    // If the current byte is a quote, consumes every byte until
+                    // the closing quote or the end of the source
+                    b'"' => {
+                        // Remember the initial start position
+                        let start: usize = *self.0.cursor().position();
 
-                    loop {
-                        // Another cancellation flag check
-                        if self.0.flag().is_cancelled() {
-                            break;
-                        }
-
-                        if let Some(current_byte) = self.0.read_next_byte() {
-                            // Break on closing quote
-                            if current_byte == b'"' {
+                        loop {
+                            // Another cancellation flag check
+                            if self.0.flag().is_cancelled() {
                                 break;
                             }
-                        } else {
-                            // In this case closing quote was not found
-                            return Some(Err(error::Token::PairNotFound {
-                                opening: "\"".into(),
-                                closing: "\"".into(),
-                                location: (
-                                    Relation::After,
-                                    row_col_pos(&self.0.data().source()[0..=start]),
-                                ),
-                            }.into()));
+
+                            if let Some(current_byte) =
+                                self.0.read_next_byte()
+                            {
+                                // Break on closing quote
+                                if current_byte == b'"' {
+                                    break;
+                                }
+                            } else {
+                                // In this case closing quote was not found
+                                return Some(Err(
+                                    error::Token::PairNotFound {
+                                        opening: "\"".into(),
+                                        closing: "\"".into(),
+                                        location: (
+                                            Relation::After,
+                                            row_col_pos(
+                                                &self.0.data().source()
+                                                    [0..=start],
+                                            ),
+                                        ),
+                                    }
+                                    .into(),
+                                ));
+                            }
                         }
+
+                        Ok(Token::new(
+                            Kind::String,
+                            start..self.0.cursor().position() + 1,
+                        ))
                     }
+                    // In this case an unexpected character was encountered
+                    _ => {
+                        let position: usize = *self.0.cursor().position();
 
-                    Ok(Token::new(
-                        Kind::String,
-                        start..self.0.cursor().position() + 1
-                    ))
-                },
-                // In this case an unexpected character was encountered
-                _ => {
-                    let position = *self.0.cursor().position();
-
-                    Err(error::Token::ExpectedButGot {
-                        expected: [Kind::Comma, Kind::String].into(),
-                        got: Some(Kind::Unexpected),
-                        location: (
-                            Relation::At,
-                            row_col_pos(&self.0.data().source()[0..=position])
-                        )
-                    }.into())
-                }
-            })
-        });
+                        Err(error::Token::ExpectedButGot {
+                            expected: [Kind::Comma, Kind::String].into(),
+                            got: Some(Kind::Unexpected),
+                            location: (
+                                Relation::At,
+                                row_col_pos(
+                                    &self.0.data().source()[0..=position],
+                                ),
+                            ),
+                        }
+                        .into())
+                    }
+                })
+            });
 
         // Read next byte
         self.0.read_next_byte();
@@ -156,54 +161,81 @@ impl<'a> Iterator for DemoLexer<'a> {
         token
     }
 }
+```
 
+`Tokens` can now be extracted from the `source` data as follows:
 
+```rust
+let valid_source: &'static [u8] = br#" "valid" , "source" "#;
 
-// Valid source data:
-let valid_source = br#" "valid" , "source" "#;
-let mut lexer = DemoLexer(Builder::new(valid_source).build().unwrap());
-let token = lexer.next().unwrap().unwrap();
+let mut lexer: DemoLexer<'static> =
+    DemoLexer(Builder::new(valid_source).build().unwrap());
+
+let token: Token<Kind> = lexer.next().unwrap().unwrap();
 assert_eq!(token.kind(), &Kind::String);
 assert_eq!(&valid_source[token.range().clone()], br#""valid""#);
 
-let token = lexer.next().unwrap().unwrap();
+let token: Token<Kind> = lexer.next().unwrap().unwrap();
 assert_eq!(token.kind(), &Kind::Comma);
 assert_eq!(&valid_source[token.range().clone()], b",");
 
-let token = lexer.next().unwrap().unwrap();
+let token: Token<Kind> = lexer.next().unwrap().unwrap();
 assert_eq!(token.kind(), &Kind::String);
 assert_eq!(&valid_source[token.range().clone()], br#""source""#);
+```
 
+`Lexer` cannot be created over empty `source` data:
 
+```rust
+let empty_source: &'static [u8] = b"";
+assert!(
+    Builder::new(empty_source)
+        .build()
+        .is_err_and(|e| e == error::Lexer::SourceIsEmpty)
+);
+```
 
-// Lexer cannot be created over empty source data:
-let empty_source = b"";
-assert!(Builder::new(empty_source).build().is_err_and(|e|
-    e == error::Lexer::SourceIsEmpty
-));
+Missing closing double quotation mark results in an error:
 
+```rust
+let source_with_missing_quote: &'static [u8] =
+    br#" "missing closing quote "#;
 
+let mut lexer: DemoLexer<'static> =
+    DemoLexer(Builder::new(source_with_missing_quote).build().unwrap());
 
-// Invalid source data:
-let invalid_source = br#" "missing closing quote "#;
-let mut lexer = DemoLexer(Builder::new(invalid_source).build().unwrap());
-assert!(lexer.next().unwrap().is_err_and(|e|
+assert!(lexer.next().unwrap().is_err_and(|e| {
     e == error::Token::PairNotFound {
         opening: "\"".into(),
         closing: "\"".into(),
-        location: (Relation::After, Position::new(1, 2))
-    }.into())
-);
+        location: (Relation::After, Position::new(1, 2)),
+    }
+    .into()
+}));
+```
 
-let invalid_source = br#" unexpected token "#;
-let mut lexer = DemoLexer(Builder::new(invalid_source).build().unwrap());
-assert!(lexer.next().unwrap().is_err_and(|e|
+`Source` data containing unexpected `tokens` results in an error:
+
+```rust
+let source_with_unexpected_token: &'static [u8] = b" unexpected token ";
+
+let mut lexer: DemoLexer<'static> =
+    DemoLexer(Builder::new(source_with_unexpected_token).build().unwrap());
+
+assert!(lexer.next().unwrap().is_err_and(|e| {
     e == error::Token::ExpectedButGot {
         expected: [Kind::Comma, Kind::String].into(),
         got: Some(Kind::Unexpected),
-        location: (Relation::At, Position::new(1, 2))
-    }.into())
-);
+        location: (Relation::At, Position::new(1, 2)),
+    }
+    .into()
+}));
+```
+
+The complete example code can be found in the [examples/demo.rs](https://github.com/mnmun/a_bc/blob/main/examples/demo.rs) file and run with the command:
+
+```bash
+cargo run --example demo
 ```
 
 ## License

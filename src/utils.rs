@@ -14,8 +14,7 @@
 //! function listed above: [`Needle`] - the needle abstraction for the
 //! [`memchr`] crate.
 //!
-//! An example of using these functions is the lexer from the [`lazy_json`]
-//! crate.
+//! An example of using these functions can be found in the [`lazy_json`] crate.
 //!
 //! [`lazy_json`]: https://github.com/mnmun/lazy_json
 
@@ -40,16 +39,20 @@ use std::rc::Rc;
 /// See the [`module`] documentation for more information.
 ///
 /// [`module`]: crate::utils
-pub enum Needle<'a> {
+pub enum Needle<'haystack> {
     /// A single-byte pattern
     One(u8),
     /// A multi-byte sequence pattern
-    Finder(Rc<Finder<'a>>),
+    Finder(Rc<Finder<'haystack>>),
 }
 
-impl<'a> Needle<'a> {
+impl<'haystack> Needle<'haystack> {
     /// # Creates an iterator over `needle` matches in `haystack`
-    fn iter(&'a self, haystack: &'a [u8]) -> Iter<'a> {
+    ///
+    /// See the [`needle`] documentation for more information.
+    ///
+    /// [`needle`]: crate::utils::Needle
+    fn iter(&'haystack self, haystack: &'haystack [u8]) -> Iter<'haystack> {
         match self {
             Needle::One(byte) => Iter::One(memchr_iter(*byte, haystack)),
             Needle::Finder(finder) => {
@@ -68,17 +71,17 @@ impl<'a> Needle<'a> {
 ///
 /// ---
 ///
-/// See the [`module`] documentation for more information.
+/// See the [`needle`] documentation for more information.
 ///
-/// [`module`]: crate::utils
-enum Iter<'a> {
+/// [`needle`]: crate::utils::Needle
+enum Iter<'haystack> {
     /// Iterator over single-byte matches
-    One(Memchr<'a>),
+    One(Memchr<'haystack>),
     /// Iterator over multi-byte sequence matches
-    Finder(Box<FindIter<'a, 'a>>),
+    Finder(Box<FindIter<'haystack, 'haystack>>),
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl Iterator for Iter<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -89,14 +92,15 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-/// # Count occurrences of `needle` in `haystack`
+/// # Counts occurrences of `needle` in `haystack`
 ///
 /// Implemented on top of the [`memchr`] crate.
 ///
 /// # Example
 ///
 /// ```rust
-/// use pretty_assertions::assert_eq;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// use a_bc::utils::{Needle, count_needles};
 ///
 /// let source = b"some kind of source";
@@ -110,11 +114,14 @@ impl<'a> Iterator for Iter<'a> {
 /// See the [`module`] documentation for more information.
 ///
 /// [`module`]: crate::utils
-pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
+pub fn count_needles<'haystack>(
+    needle: &Needle<'haystack>,
+    haystack: &'haystack [u8],
+) -> usize {
     needle.iter(haystack).count()
 }
 
-/// # Count occurrences of `needle` in `haystack`, ignoring `escaped` matches
+/// # Counts occurrences of `needle` in `haystack`, ignoring `escaped` matches
 ///
 /// A match is counted only when the number of consecutive `escape` bytes
 /// immediately before it is even; an odd count means the match itself is
@@ -127,7 +134,8 @@ pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
 /// # Example
 ///
 /// ```rust
-/// use pretty_assertions::assert_eq;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// use a_bc::utils::{Needle, count_needles_considering_escapes};
 ///
 /// let source = br"s\ome kind of s\\ource";
@@ -148,10 +156,10 @@ pub fn count_needles<'a>(needle: &Needle<'a>, haystack: &[u8]) -> usize {
 /// See the [`module`] documentation for more information.
 ///
 /// [`module`]: crate::utils
-pub fn count_needles_considering_escapes<'a>(
-    needle: &Needle<'a>,
-    escape: &'a [u8],
-    haystack: &[u8],
+pub fn count_needles_considering_escapes<'haystack>(
+    needle: &Needle<'haystack>,
+    escape: &'haystack [u8],
+    haystack: &'haystack [u8],
 ) -> usize {
     let it = needle.iter(haystack);
 
@@ -183,7 +191,7 @@ pub fn count_needles_considering_escapes<'a>(
     counter
 }
 
-/// # Count occurrences of `needle` in `haystack`, ignoring `delimited` matches
+/// # Counts occurrences of `needle` in `haystack`, ignoring `delimited` matches
 ///
 /// A `delimiter` toggles the "inside a delimited region" state (e.g. a region
 /// delimited by `"`); matches found while inside are not counted. The running
@@ -195,7 +203,8 @@ pub fn count_needles_considering_escapes<'a>(
 /// # Example
 ///
 /// ```rust
-/// use pretty_assertions::assert_eq;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// use a_bc::utils::{
 ///     Needle,
 ///     count_needles_considering_delimiters
@@ -222,11 +231,11 @@ pub fn count_needles_considering_escapes<'a>(
 /// See the [`module`] documentation for more information.
 ///
 /// [`module`]: crate::utils
-pub fn count_needles_considering_delimiters<'a>(
-    needle: &Needle<'a>,
-    delimiter: &Needle<'a>,
+pub fn count_needles_considering_delimiters<'haystack>(
+    needle: &Needle<'haystack>,
+    delimiter: &Needle<'haystack>,
     delimiter_counter: &mut usize,
-    mut haystack: &[u8],
+    mut haystack: &'haystack [u8],
 ) -> usize {
     let mut count = 0;
 
@@ -256,7 +265,7 @@ pub fn count_needles_considering_delimiters<'a>(
     count
 }
 
-/// # Count occurrences of `needle` in `haystack`, considering `escaped` `delimiters`
+/// # Counts occurrences of `needle` in `haystack`, considering `escaped` `delimiters`
 ///
 /// Combines [`count_needles_considering_delimiters()`] with
 /// [`count_needles_considering_escapes()`]: delimiters themselves can be
@@ -269,7 +278,8 @@ pub fn count_needles_considering_delimiters<'a>(
 /// # Example
 ///
 /// ```rust
-/// use pretty_assertions::assert_eq;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// use a_bc::utils::{
 ///     Needle,
 ///     count_needles_considering_escaped_delimiters
@@ -297,12 +307,12 @@ pub fn count_needles_considering_delimiters<'a>(
 /// See the [`module`] documentation for more information.
 ///
 /// [`module`]: crate::utils
-pub fn count_needles_considering_escaped_delimiters<'a>(
-    needle: &Needle<'a>,
-    delimiter_escape: &'a [u8],
-    delimiter: &Needle<'a>,
+pub fn count_needles_considering_escaped_delimiters<'haystack>(
+    needle: &Needle<'haystack>,
+    delimiter_escape: &'haystack [u8],
+    delimiter: &Needle<'haystack>,
     delimiter_counter: &mut usize,
-    mut haystack: &[u8],
+    mut haystack: &'haystack [u8],
 ) -> usize {
     let mut count = 0;
 

@@ -2,7 +2,7 @@
 //!
 //! ![](https://github.com/mnmun/images/blob/main/trail.png?raw=true)
 //!
-//! Provides [`token`] - a lexed unit of text.
+//! Provides a [`token`] - a lexed unit of text.
 //!
 //! ---
 //!
@@ -19,12 +19,41 @@ use crate::traits::{InnerRange, KindBounds};
 ///
 /// ![](https://github.com/mnmun/images/blob/main/trail.png?raw=true)
 ///
-/// Represented by a user-defined `kind` and the byte `range` that it occupies
-/// within the [`source`] data.
+/// User-defined `kind` and the byte `range` that it occupies within the
+/// [`source`] data.
 ///
 /// The `Kind` type parameter must satisfy the [`KindBounds`] trait.
 ///
-/// An instance can be obtained using the [`Token::new()`] method.
+/// ## Creation
+///
+/// Can be created using the [`Token::new()`] method:
+///
+/// ```rust
+/// # use pretty_assertions::assert_eq;
+/// #
+/// use std::fmt;
+///
+/// use a_bc::Token;
+///
+/// #[derive(PartialEq, Clone, Copy, Debug)]
+/// enum SomeKind {
+///     Foo,
+///     Bar,
+/// }
+///
+/// impl fmt::Display for SomeKind {
+///     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+///         match self {
+///             SomeKind::Foo => write!(f, "Foo"),
+///             SomeKind::Bar => write!(f, "Bar"),
+///         }
+///     }
+/// }
+///
+/// let token: Token<SomeKind> = Token::new(SomeKind::Foo, 1..5);
+/// assert_eq!(*token.kind(), SomeKind::Foo);
+/// assert_eq!(*token.range(), 1..5);
+/// ```
 ///
 /// ---
 ///
@@ -38,9 +67,15 @@ use crate::traits::{InnerRange, KindBounds};
 #[getset(get = "pub")]
 pub struct Token<Kind: KindBounds> {
     /// # The user-defined token `kind`
+    ///
+    /// See the [`token`] documentation for more information.
+    ///
+    /// [`token`]: crate::Token
     kind: Kind,
 
     /// # The byte `range` occupied by the [`token`] within the [`source`] data
+    ///
+    /// See the [`token`] documentation for more information.
     ///
     /// [`token`]: crate::Token
     /// [`source`]: crate::lexer::Data::source()
@@ -50,6 +85,8 @@ pub struct Token<Kind: KindBounds> {
 impl<Kind: KindBounds> Token<Kind> {
     /// # Creates a new [`token`] with the given `kind` and byte `range`
     ///
+    /// See the [`token`] documentation for more information.
+    ///
     /// [`token`]: crate::Token
     pub fn new(kind: Kind, range: Range<usize>) -> Self {
         Self { kind, range }
@@ -58,8 +95,6 @@ impl<Kind: KindBounds> Token<Kind> {
 
 impl<Kind: KindBounds + InnerRange> Token<Kind> {
     /// # Returns the inner content `range`, excluding delimiters
-    ///
-    /// ---
     ///
     /// See the [`InnerRange`] documentation for more information.
     pub fn inner_range(&self) -> Option<Range<usize>> {

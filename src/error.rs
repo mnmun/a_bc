@@ -2,15 +2,15 @@
 //!
 //! ![](https://github.com/mnmun/images/blob/main/question.png?raw=true)
 //!
-//! Provides the following error types:
+//! Defines the following error types:
 //!
-//! - [`Error`] - the unified error type that aggregates [`lexer`] and [`token`]
-//!   errors;
-//! - [`Lexer`] - lexer related errors;
-//! - [`Token`] - errors raised while creating a new token.
+//! - [`Error`] - the unified error type that aggregates [`lexer`](crate::Lexer)
+//!   and [`token`](crate::Token) errors;
+//! - [`Lexer`] - [`lexer`](crate::Lexer) related errors;
+//! - [`Token`] - errors raised while creating a new [`token`](crate::Token).
 //!
 //! In addition, provides the helper types and function used to describe the
-//! location of a [`token error`] within the [`source`] data:
+//! location of a [`token`] error within the [`source`] data:
 //!
 //! - [`Position`] - 1-indexed row-column coordinates representing a position
 //!   in the [`lexer's`] [`source`] data, consistent with the convention
@@ -24,10 +24,10 @@
 //!
 //! See the [`crate`] documentation for usage example.
 //!
-//! [`lexer`]: crate::Lexer
-//! [`Token`]: crate::Token
+//! [`Token`]: crate::error::Token
+//! [`token`]: crate::error::Token
+//! [`Lexer`]: crate::error::Lexer
 //! [`position`]: crate::error::Position
-//! [`token error`]: crate::error::Token
 //! [`lexer's`]: crate::Lexer
 //! [`source`]: crate::lexer::Data::source()
 
@@ -307,16 +307,16 @@ impl<Kind: KindBounds> error::Error for Token<Kind> {
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Getters)]
 #[getset(get = "pub")]
 pub struct Position {
-    /// The 1-indexed row number within the `source` data, treated as a text
-    /// file
+    /// # The 1-indexed row number within the `source` data, treated as a text file
     row: usize,
-    /// The 1-indexed column number within the `source` data, treated as a text
-    /// file
+    /// # The 1-indexed column number within the `source` data, treated as a text file
     col: usize,
 }
 
 impl Position {
     /// # Creates a new [`position`] with the given `row` and `col`
+    ///
+    /// See the [`position`] documentation for more information.
     ///
     /// [`position`]: crate::error::Position
     pub fn new(row: usize, col: usize) -> Self {
@@ -381,7 +381,8 @@ impl fmt::Display for Relation {
 /// # Example
 ///
 /// ```rust
-/// use pretty_assertions::assert_eq;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// use a_bc::error::row_col_pos;
 ///
 /// // Four-row source
@@ -403,6 +404,10 @@ impl fmt::Display for Relation {
 /// assert_eq!(*position.row(), 2); // Second row
 /// assert_eq!(*position.col(), 4); // Fourth column
 /// ```
+///
+/// ---
+///
+/// See the [`position`] documentation for more information.
 ///
 /// [`position`]: crate::error::Position
 pub fn row_col_pos(source: &[u8]) -> Position {
